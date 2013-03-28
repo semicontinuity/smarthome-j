@@ -44,9 +44,9 @@ public class Main {
         canNetwork.add(canNetworkSegment0);
 
 
-        final CanNetworkTextMessageHandler canNetworkTextMessageHandler = new CanNetworkTextMessageHandler();
-        canNetworkTextMessageHandler.setCanNetwork(canNetwork);
-        httpServer.put("/canp/*", canNetworkTextMessageHandler);
+        final CanNetworkMessageHandler canNetworkMessageHandler = new CanNetworkTextMessageHandler();
+        canNetworkMessageHandler.setCanNetwork(canNetwork);
+        httpServer.put("/canp/*", canNetworkMessageHandler);
 
 
 //        canNetworkAdapter.start();
