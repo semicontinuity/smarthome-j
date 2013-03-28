@@ -12,7 +12,7 @@ import java.util.Map;
 
 
 public abstract class CanNetworkMessageHandler implements IWebSocketHandler {
-    static final Logger LOGGER = Logger.getLogger(CanNetworkTextMessageHandler.class);
+    static final Logger LOGGER = Logger.getLogger(CanNetworkMessageHandler.class);
     private final Map<IWebSocketConnection, Consumer<byte[], IOException>> proxies = new IdentityHashMap<>();
     private CanNetwork canNetwork;
 

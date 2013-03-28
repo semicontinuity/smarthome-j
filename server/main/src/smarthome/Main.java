@@ -44,7 +44,7 @@ public class Main {
         canNetwork.add(canNetworkSegment0);
 
 
-        final CanNetworkMessageHandler canNetworkMessageHandler = new CanNetworkTextMessageHandler();
+        final CanNetworkMessageHandler canNetworkMessageHandler = new CanNetworkBinaryMessageHandler();
         canNetworkMessageHandler.setCanNetwork(canNetwork);
         httpServer.put("/canp/*", canNetworkMessageHandler);
 
