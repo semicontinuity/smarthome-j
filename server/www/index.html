@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Smart home</title>
+
+        <link type="text/css" href="http://code.jquery.com/ui/1.10.2/themes/smoothness/jquery-ui.css" rel="stylesheet"/>
+<!--
+        <link type="text/css" href="themes/css/jquery.ui.all.css" rel="stylesheet"/>
+        <link type="text/css" href="themes/css/jquery.ui.progressbar.css" rel="stylesheet"/>
+-->
+
+        <script type="text/javascript" src="js/jquery-1.8.0.js"></script>
+<!--
+        <script type="text/javascript" src="js/jquery.ui.core.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.widget.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.progressbar.js"></script>
+-->
+        <script type="text/javascript" src="http://code.jquery.com/ui/1.10.2/jquery-ui.js"></script>
+
+        <script type="text/javascript" src="js/jqtouch-jquery.js"></script>
+        <style type="text/css" media="screen">@import "themes/css/apple.css";</style>
+        <script src="js/zepto.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="js/jqtouch.min.js" type="text/javascript" charset="utf-8"></script>
+
+
+        <script type="text/javascript" charset="utf-8">
+            var jQT = new $.jQTouch({});
+            var pages;
+            var adapterFactories;
+
+            $(function () {
+                const QUERY = '';
+                function socket(id) {
+                    return new WebSocket("ws://" + window.document.location.host + '/canp/' + id);
+                }
+
+                adapterFactories = {
+                    progressBar: function (id, element) {
+                        element.progressbar().height(10);
+                        return function() {
+                            var ws;
+                            return {
+                                activate: function (active) {
+                                    if (active) {
+                                        ws = socket(id);
+                                        ws.onopen = function () {
+                                            ws.send(QUERY);
+                                        };
+                                        ws.onmessage = function (evt) {
+                                            element.progressbar({value:parseInt(evt.data.substring(0,2), 16)});
+                                        };
+                                        ws.onerror = function (evt) {
+                                            console.log(evt);
+                                        };
+                                    }
+                                    else {
+                                        ws.close();
+                                    }
+                                }
+                            } 
+                        }();
+                    },
+                    linearActuator: function (id, element) {
+                        return function () {
+                            const STOP = '00';
+                            const FORWARD = '01';
+                            const BACKWARD = '02';
+                            var ws;
+                            return {
+                                activate:function (active) {
+                                    if (active) {
+                                        ws = socket(id);
+                                        ws.onopen = function () {
+                                            ws.send(QUERY);
+                                        };
+                                        ws.onmessage = function (evt) {
+                                            console.log(evt.data);
+                                            element.children[0].className = (evt.data == FORWARD) ? "on" : "";
+                                            element.children[2].className = (evt.data == BACKWARD) ? "on" : "";
+                                        };
+                                        ws.onerror = function (evt) {
+                                            console.log(evt);
+                                        };
+                                    }
+                                    else {
+                                        ws.close();
+                                    }
+                                },
+                                sendForward:function() {ws.send(FORWARD)},
+                                sendStop:function() {ws.send(STOP)},
+                                sendBackward:function() {ws.send(BACKWARD)}
+                            }
+                        }();
+                    }
+                };
+
+                pages = {
+                    'roller-shutters':function () {
+                        var element = $('#roller-shutters');
+                        var children = [
+                            adapterFactories.linearActuator('06/00', element.children('ul')[0]),
+                            adapterFactories.progressBar('06/02', $("#rs0_pb"))
+
+//                            adapterFactories.progressBar('05/02', $("#rs1_pb")),
+//                            adapterFactories.linearActuator('05/00', element.children('ul')[1])
+                        ];
+                        element.bind('pageAnimationStart', function (e, info) {
+                            for (var key in children) children[key].activate(!info.back);
+                        });
+
+                        return {
+                            children:children
+                        }
+                    }()
+                };
+            });
+        </script>
+
+
+    <style type="text/css" media="screen">
+        #jqt ul li.on a.active small{
+          background: #008040;
+        }
+        #jqt ul li.on small {
+          background: #00FF00;
+          z-index: 10;
+          -webkit-border-radius: 3px;
+          border-radius: 3px;
+          display: block;
+          width: auto;
+        }
+    </style>
+
+    </head>
+
+    <body>
+        <div id="jqt">
+            <div id="main">
+                <div class="toolbar">
+                    <h1>Smart home</h1>
+                </div>
+                <ul class="edgetoedge">
+                    <li class="arrow"><a href="#roller-shutters">Roller shutters</a></li>
+                </ul>
+            </div>
+            <div id="roller-shutters">
+                <div class="toolbar">
+                    <h1>Roller shutters</h1>
+                    <a href="#" class="back">Back</a>
+                </div>
+
+                <h2>Room 1</h2>
+                <ul style="margin-top: 10px;" class="rounded">
+                    <li><a href="#" onclick="pages['roller-shutters'].children[0].sendForward()">Up<small class="counter">&nbsp;</small></a></li>
+                    <li><a href="#" onclick="pages['roller-shutters'].children[0].sendStop()">Stop</a></li>
+                    <li><a href="#" onclick="pages['roller-shutters'].children[0].sendBackward()">Down<small class="counter">&nbsp;</small></a></li>
+                </ul>
+                <div id="rs0_pb" style="z-index:100;margin:0px 10px;"></div>
+
+<!--
+                <h2>Room 2</h2>
+                <div id="rs1_pb" style="z-index:100;margin:0px 10px;"></div>
+                <ul style="margin-top: 10px;" class="rounded">
+                    <li><a href="#" onclick="pages['roller-shutters'].children[1].sendForward()">Up<small class="counter">&nbsp;</small></a></li>
+                    <li><a href="#" onclick="pages['roller-shutters'].children[1].sendStop()">Stop</a></li>
+                    <li><a href="#" onclick="pages['roller-shutters'].children[1].sendBackward()">Down<small class="counter">&nbsp;</small></a></li>
+                </ul>
+-->
+            </div>
+        </div>
+    </body>
+</html>
