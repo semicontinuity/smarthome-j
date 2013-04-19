@@ -23,135 +23,67 @@
         <script src="js/zepto.min.js" type="text/javascript" charset="utf-8"></script>
         <script src="js/jqtouch.min.js" type="text/javascript" charset="utf-8"></script>
 
+        <script src="js/smarthome/ws_canp.js" type="text/javascript" charset="utf-8"></script>
+        <script src="js/smarthome/ws_canp_widget_factory.js" type="text/javascript" charset="utf-8"></script>
+
 
         <script type="text/javascript" charset="utf-8">
+            //noinspection JSPotentiallyInvalidConstructorUsage
             var jQT = new $.jQTouch({});
-            var pages;
-            var adapterFactories;
 
             $(function () {
-                function socket(id) {
-                    var webSocket = new WebSocket("ws://" + window.document.location.host + '/canp/' + id);
-                    webSocket.binaryType = 'arraybuffer';
-                    return webSocket;
-                }
+                var rs1_la = widgetFactory.linearActuator('06/00', $("#rollers_room1_la"));
+                var rs1_pb = widgetFactory.progressBar('06/02', $("#rollers_room1_pb"));
+                $("#roller-shutters").bind('pageAnimationStart', function (e, info) {
+                    rs1_la(!info.back);
+                    rs1_pb(!info.back);
+                });
 
-                var transport = function() {
-                    if (1) {
-                        return {
-                            makeQuery: function() { var b = new Uint8Array(0); return b;},
-                            make: function(id) { var b = new Uint8Array(1); b[0] = id; return b;},
-                            decode: function(data) { return new Uint8Array(data);}
-                        }
-                    }
-                    else {
-                        return {
-                            makeQuery: function() { return ''},
-                            make: function(id) { return [id.toString(16)];},
-                            decode: function(data) { return [parseInt(data.substring(0,2), 16)];}
-                        }
-                    }
-                }();
+                var wv = widgetFactory.binaryOutput('10/00', $("#water_valve"), "Valve");
+                var ws = widgetFactory.binaryOutput('10/02', $("#water_siren"), "Siren");
+                $("#water").bind('pageAnimationStart', function (e, info) {
+                    wv(!info.back);
+                    ws(!info.back);
+                });
 
-                const QUERY =  transport.makeQuery();
+                var ma = widgetFactory.binaryOutput('10/01', $("#music_amp"), "Amplifier");
+                $("#music").bind('pageAnimationStart', function (e, info) {
+                    ma(!info.back);
+                });
 
-
-                adapterFactories = {
-                    progressBar: function (id, element) {
-                        element.progressbar().height(10);
-                        return function() {
-                            var ws;
-                            return {
-                                activate: function (active) {
-                                    if (active) {
-                                        ws = socket(id);
-                                        ws.onopen = function () {
-                                            ws.send(QUERY);
-                                        };
-                                        ws.onmessage = function (evt) {
-                                            element.progressbar({value: transport.decode(evt.data)[0]});
-                                        };
-                                        ws.onerror = function (evt) {
-                                            console.log(evt);
-                                        };
-                                    }
-                                    else {
-                                        ws.close();
-                                    }
-                                }
-                            } 
-                        }();
-                    },
-                    linearActuator: function (id, element) {
-                        return function () {
-                            const STOP =  transport.make(0);
-                            const FORWARD =  transport.make(1);
-                            const BACKWARD =  transport.make(2);
-                            var ws;
-                            return {
-                                activate:function (active) {
-                                    if (active) {
-                                        ws = socket(id);
-                                        ws.onopen = function () {
-                                            ws.send(QUERY);
-                                        };
-                                        ws.onmessage = function (evt) {
-                                            var message = transport.decode(evt.data);
-                                            element.children[0].className = (message[0] == FORWARD[0]) ? "on" : "";
-                                            element.children[2].className = (message[0] == BACKWARD[0]) ? "on" : "";
-                                        };
-                                        ws.onerror = function (evt) {
-                                            console.log(evt);
-                                        };
-                                    }
-                                    else {
-                                        ws.close();
-                                    }
-                                },
-                                sendForward:function() {ws.send(FORWARD)},
-                                sendStop:function() {ws.send(STOP)},
-                                sendBackward:function() {ws.send(BACKWARD)}
-                            }
-                        }();
-                    }
-                };
-
-                pages = {
-                    'roller-shutters':function () {
-                        var element = $('#roller-shutters');
-                        var children = [
-                            adapterFactories.linearActuator('06/00', element.children('ul')[0]),
-                            adapterFactories.progressBar('06/02', $("#rs0_pb"))
-
-//                            adapterFactories.progressBar('05/02', $("#rs1_pb")),
-//                            adapterFactories.linearActuator('05/00', element.children('ul')[1])
-                        ];
-                        element.bind('pageAnimationStart', function (e, info) {
-                            for (var key in children) children[key].activate(!info.back);
-                        });
-
-                        return {
-                            children:children
-                        }
-                    }()
-                };
+                var as = widgetFactory.binaryOutput('10/03', $("#alarm_siren"), "Siren");
+                $("#alarm").bind('pageAnimationStart', function (e, info) {
+                    as(!info.back);
+                });
             });
         </script>
 
 
-    <style type="text/css" media="screen">
-        #jqt ul li.on a.active small{
-          background: #008040;
-        }
-        #jqt ul li.on small {
-          background: #00FF00;
-          z-index: 10;
-          -webkit-border-radius: 3px;
-          border-radius: 3px;
-          display: block;
-          width: auto;
-        }
-    </style>
+        <style type="text/css" media="screen">
+            #jqt ul li.green.on a.active small {
+                background: #008040;
+            }
+
+            #jqt ul li.green.on small {
+                background: #00FF00;
+                z-index: 10;
+                border-radius: 3px;
+                display: block;
+                width: auto;
+            }
+
+            #jqt ul li.red.on a.active small {
+                background: #800040;
+            }
+
+            #jqt ul li.red.on small {
+                background: #FF0000;
+                z-index: 10;
+                border-radius: 3px;
+                display: block;
+                width: auto;
+            }
+        </style>
 
     </head>
 
@@ -163,6 +95,9 @@
                 </div>
                 <ul class="edgetoedge">
                     <li class="arrow"><a href="#roller-shutters">Roller shutters</a></li>
+                    <li class="arrow"><a href="#water">Water</a></li>
+                    <li class="arrow"><a href="#music">Music</a></li>
+                    <li class="arrow"><a href="#alarm">Alarm</a></li>
                 </ul>
             </div>
             <div id="roller-shutters">
@@ -172,23 +107,45 @@
                 </div>
 
                 <h2>Room 1</h2>
-                <ul style="margin-top: 10px;" class="rounded">
-                    <li><a href="#" onclick="pages['roller-shutters'].children[0].sendForward()">Up<small class="counter">&nbsp;</small></a></li>
-                    <li><a href="#" onclick="pages['roller-shutters'].children[0].sendStop()">Stop</a></li>
-                    <li><a href="#" onclick="pages['roller-shutters'].children[0].sendBackward()">Down<small class="counter">&nbsp;</small></a></li>
+                <ul id="rollers_room1_la" style="margin-top: 10px;" class="rounded">
                 </ul>
-                <div id="rs0_pb" style="z-index:100;margin:0px 10px;"></div>
+                <div id="rollers_room1_pb" style="z-index:100;margin:0 10px;"></div>
+            </div>
+            <div id="water">
+                <div class="toolbar">
+                    <h1>Water supply</h1>
+                    <a href="#" class="back">Back</a>
+                </div>
 
-<!--
-                <h2>Room 2</h2>
-                <div id="rs1_pb" style="z-index:100;margin:0px 10px;"></div>
                 <ul style="margin-top: 10px;" class="rounded">
-                    <li><a href="#" onclick="pages['roller-shutters'].children[1].sendForward()">Up<small class="counter">&nbsp;</small></a></li>
-                    <li><a href="#" onclick="pages['roller-shutters'].children[1].sendStop()">Stop</a></li>
-                    <li><a href="#" onclick="pages['roller-shutters'].children[1].sendBackward()">Down<small class="counter">&nbsp;</small></a></li>
+                    <li class="red" id="water_valve"></li>
+                    <li class="red" id="water_siren"></li>
                 </ul>
--->
+            </div>
+            <div id="music">
+                <div class="toolbar">
+                    <h1>Music</h1>
+                    <a href="#" class="back">Back</a>
+                </div>
+
+                <ul style="margin-top: 10px;" class="rounded">
+                    <li class="green" id="music_amp"></li>
+                </ul>
+            </div>
+            <div id="alarm">
+                <div class="toolbar">
+                    <h1>Music</h1>
+                    <a href="#" class="back">Back</a>
+                </div>
+
+                <ul style="margin-top: 10px;" class="rounded">
+                    <li class="red" id="alarm_siren"></li>
+                </ul>
             </div>
         </div>
+
+    <script>
+
+    </script>
     </body>
 </html>

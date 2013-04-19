@@ -1,4 +1,4 @@
-package smarthome;
+package smarthome.canp;
 
 import gearbox.io.ByteChannelMultiplexer;
 import openbox.patterns.Consumer;
@@ -66,14 +66,14 @@ import java.util.Map;
  * This implementation is designed for network with 3 segment_id bits;
  * thus with max 8 segments and 32 nodes per segment.
  */
-public class CanNetwork implements ByteChannelMultiplexer {
+public class CanpNetwork implements ByteChannelMultiplexer {
 
-    final CanNetworkSegment[] segments = new CanNetworkSegment[8];
+    final CanpNetworkSegment[] segments = new CanpNetworkSegment[8];
     final transient Map<String, Endpoint> resources = new HashMap<>();
 
 
 
-    public void add(final CanNetworkSegment segment) {
+    public void add(final CanpNetworkSegment segment) {
         segments[segment.getId()] = segment;
         segment.setNetwork(this);
     }
@@ -116,7 +116,7 @@ public class CanNetwork implements ByteChannelMultiplexer {
 
         final int host;
         final int slot;
-        final CanNetworkSegment segment;
+        final CanpNetworkSegment segment;
 
 
         public Endpoint(final int host, final int slot) {

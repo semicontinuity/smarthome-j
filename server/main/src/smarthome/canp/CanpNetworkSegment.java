@@ -1,4 +1,4 @@
-package smarthome;
+package smarthome.canp;
 
 import gearbox.io.ByteChannelMultiplexer;
 import gearbox.io.MultiplexedByteChannel;
@@ -7,23 +7,28 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 
-public class CanNetworkSegment implements ByteChannelMultiplexer {
+/**
+ * Abstraction of a segment of CAN network, with devices talking CANP protocol.
+ * Each segment corresponds to different a physical CAN network.
+ * The communication is done with the help of {@linkplain #canpNetworkAdapter}.
+ */
+public class CanpNetworkSegment implements ByteChannelMultiplexer {
 
-    CanNetwork network;
+    CanpNetwork network;
     private int id;
-    private MultiplexedByteChannel canNetworkAdapter;
+    private MultiplexedByteChannel canpNetworkAdapter;
     private transient Thread thread;
 
 
-    public void setNetwork(final CanNetwork network) { this.network = network; }
+    public void setNetwork(final CanpNetwork network) { this.network = network; }
 
     public int getId() { return id; }
 
     public void setId(final int id) { this.id = id; }
 
 
-    public void setCanNetworkAdapter(final MultiplexedByteChannel canNetworkAdapter) {
-        this.canNetworkAdapter = canNetworkAdapter;
+    public void setCanpNetworkAdapter(final MultiplexedByteChannel canpNetworkAdapter) {
+        this.canpNetworkAdapter = canpNetworkAdapter;
     }
 
 
@@ -46,9 +51,10 @@ public class CanNetworkSegment implements ByteChannelMultiplexer {
                 final ByteBuffer buffer = ByteBuffer.allocate(8);
                 try {
                     while (!thread.isInterrupted()) {
-                        final int id = canNetworkAdapter.read(buffer);
+                        final int id = canpNetworkAdapter.read(buffer);
+                        System.out.println("Received, id = " + id);
                         buffer.flip();
-                        write(id, buffer);
+                        network.write(id, buffer);
                         buffer.clear();
                     }
                 }
@@ -61,12 +67,14 @@ public class CanNetworkSegment implements ByteChannelMultiplexer {
 
 
     /**
-     * Frame received from this segment.
-     * @param eid the EID part of frame
-     * @param buffer the data of frame
+     * Send a frame to this network segment.
+     * @param eid
+     * @param buffer
      * @throws IOException
      */
     public void write(final int eid, final ByteBuffer buffer) throws IOException {
-        network.write(eid, buffer);
+//        network.write(eid, buffer);
+        System.out.printf("eid=%08x\n", eid);
+        canpNetworkAdapter.write(eid, buffer);
     }
 }

@@ -1,14 +1,16 @@
-package smarthome;
+package smarthome.canp;
 
-import org.xlightweb.*;
+import org.xlightweb.TextMessage;
+import org.xlightweb.WebSocketMessage;
 
 import java.io.IOException;
 
 
-public class CanNetworkTextMessageHandler extends CanNetworkMessageHandler {
+@SuppressWarnings("UnusedDeclaration")
+public class WebSocketCodec_Text implements WebSocketCodec {
 
     @Override
-    protected WebSocketMessage encodeMessage(byte[] value) {
+    public WebSocketMessage encodeMessage(byte[] value) {
         final StringBuilder builder = new StringBuilder();
         //noinspection ForLoopReplaceableByForEach
         for (int j = 0; j < value.length; j++) {
@@ -20,8 +22,8 @@ public class CanNetworkTextMessageHandler extends CanNetworkMessageHandler {
 
 
     @Override
-    protected byte[] readMessage(final IWebSocketConnection connection) throws IOException {
-        return hexStringToBytes(connection.readTextMessage().toString());
+    public byte[] decodeMessage(final WebSocketMessage message) throws IOException {
+        return hexStringToBytes(message.toString());
     }
 
 

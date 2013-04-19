@@ -1,4 +1,4 @@
-package smarthome;
+package smarthome.canp;
 
 import openbox.patterns.Consumer;
 import org.apache.log4j.Logger;
@@ -11,20 +11,32 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 
 
-public abstract class CanNetworkMessageHandler implements IWebSocketHandler {
-    static final Logger LOGGER = Logger.getLogger(CanNetworkMessageHandler.class);
+/**
+ * Websocket gateway to a CAN network with devices talking CANP protocol.
+ * Translates websocket messages to CAN frames and back.
+ * Websocket connections are established to CANP endpoints.
+ * The URI scheme is "/.../{canp_host}/{canp_endpoint}".
+ */
+public class WebSocketCanpNetworkGateway implements IWebSocketHandler {
+    static final Logger LOGGER = Logger.getLogger(WebSocketCanpNetworkGateway.class);
     private final Map<IWebSocketConnection, Consumer<byte[], IOException>> proxies = new IdentityHashMap<>();
-    private CanNetwork canNetwork;
+    private CanpNetwork canpNetwork;
+    private WebSocketCodec webSocketCodec;
 
 
-    public void setCanNetwork(final CanNetwork canNetwork) {
-        this.canNetwork = canNetwork;
+    public void setCanpNetwork(final CanpNetwork canpNetwork) {
+        this.canpNetwork = canpNetwork;
+    }
+
+
+    public void setWebSocketCodec(final WebSocketCodec webSocketCodec) {
+        this.webSocketCodec = webSocketCodec;
     }
 
 
     @Override
     public void onConnect(final IWebSocketConnection connection) throws IOException {
-        final CanNetwork.Endpoint endpoint = endpoint(connection);
+        final CanpNetwork.Endpoint endpoint = endpoint(connection);
         final Consumer<byte[], IOException> proxy = newProxy(connection);
         endpoint.listeners.add(proxy);
         proxies.put(connection, proxy);
@@ -33,25 +45,25 @@ public abstract class CanNetworkMessageHandler implements IWebSocketHandler {
 
     @Override
     public void onMessage(final IWebSocketConnection connection) throws IOException {
-        final CanNetwork.Endpoint endpoint = endpoint(connection);
-        endpoint.put(readMessage(connection));
+        final CanpNetwork.Endpoint endpoint = endpoint(connection);
+        endpoint.put(webSocketCodec.decodeMessage(connection.readMessage()));
     }
 
 
     @Override
     public void onDisconnect(final IWebSocketConnection connection) throws IOException {
-        final CanNetwork.Endpoint endpoint = endpoint(connection);
+        final CanpNetwork.Endpoint endpoint = endpoint(connection);
         endpoint.listeners.remove(proxies.remove(connection));
     }
 
 
-    protected CanNetwork.Endpoint endpoint(final IWebSocketConnection connection) throws IOException {
+    protected CanpNetwork.Endpoint endpoint(final IWebSocketConnection connection) throws IOException {
         final String requestURI = connection.getUpgradeRequestHeader().getRequestURI();
         final int index = requestURI.indexOf('/', 1);
         if (index == -1) connection.close();
 
         final String endpointAddress = requestURI.substring(index + 1);
-        return canNetwork.endpoint(endpointAddress);
+        return canpNetwork.endpoint(endpointAddress);
     }
 
 
@@ -59,14 +71,11 @@ public abstract class CanNetworkMessageHandler implements IWebSocketHandler {
         return new Consumer<byte[], IOException>() {
             @Override
             public void put(byte[] value) throws IOException {
-                final WebSocketMessage message = encodeMessage(value);
+                final WebSocketMessage message = webSocketCodec.encodeMessage(value);
                 LOGGER.debug("Writing message '" + message + "' to websocket connection " + connection.getId());
                 connection.writeMessage(message);
             }
         };
     }
 
-    protected abstract byte[] readMessage(IWebSocketConnection connection) throws IOException;
-
-    protected abstract WebSocketMessage encodeMessage(byte[] value);
 }

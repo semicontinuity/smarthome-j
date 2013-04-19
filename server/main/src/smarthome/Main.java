@@ -3,6 +3,12 @@ package smarthome;
 import gearbox.server.http.xlightweb.FileRequestHandler;
 import gearbox.server.http.xlightweb.Server;
 import org.apache.log4j.BasicConfigurator;
+import smarthome.canp.CanpNetwork;
+import smarthome.canp.CanpNetworkAdapter_SocketCAN;
+import smarthome.canp.CanpNetworkSegment;
+import smarthome.canp.WebSocketCanpNetworkGateway;
+import smarthome.canp.WebSocketCodec;
+import smarthome.canp.WebSocketCodec_Binary;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,33 +30,36 @@ public class Main {
 
     static void run() throws IOException, InterruptedException {
         final Server httpServer = new Server();
-        httpServer.setHost(InetAddress.getByName("127.0.0.1"));
-        httpServer.setPort(80);
+        httpServer.setHost(InetAddress.getByName(System.getProperty("httpServer.host")));
+        httpServer.setPort(Integer.parseInt(System.getProperty("httpServer.port")));
 
         final FileRequestHandler staticContentHandler = new FileRequestHandler();
         staticContentHandler.setPath(new File(System.getProperty("app.www.dir")));
         httpServer.put("/view/*", staticContentHandler);
 
-        final CanNetworkAdapterEmu canNetworkAdapter0 = new CanNetworkAdapterEmu();
-//        final CanNetworkAdapter canNetworkAdapter = new CanNetworkAdapter();
-//        canNetworkAdapter.setCanInterface(System.getProperty("can.iface"));
+        final CanpNetworkAdapter_SocketCAN canpNetworkAdapter = new CanpNetworkAdapter_SocketCAN();
+        canpNetworkAdapter.setCanInterface(System.getProperty("can.iface"));
 
-        final CanNetworkSegment canNetworkSegment0 = new CanNetworkSegment();
-        canNetworkSegment0.setId(0);
-        canNetworkSegment0.setCanNetworkAdapter(canNetworkAdapter0);
-
-
-        final CanNetwork canNetwork = new CanNetwork();
-        canNetwork.add(canNetworkSegment0);
+        final CanpNetworkSegment canpNetworkSegment0 = new CanpNetworkSegment();
+        canpNetworkSegment0.setId(0);
+        canpNetworkSegment0.setCanpNetworkAdapter(canpNetworkAdapter);
 
 
-        final CanNetworkMessageHandler canNetworkMessageHandler = new CanNetworkBinaryMessageHandler();
-        canNetworkMessageHandler.setCanNetwork(canNetwork);
-        httpServer.put("/canp/*", canNetworkMessageHandler);
+        final CanpNetwork canpNetwork = new CanpNetwork();
+        canpNetwork.add(canpNetworkSegment0);
 
 
-//        canNetworkAdapter.start();
-        canNetworkSegment0.start();
+        final WebSocketCodec webSocketCodec = new WebSocketCodec_Binary();
+
+
+        final WebSocketCanpNetworkGateway webSocketCanpNetworkGateway = new WebSocketCanpNetworkGateway();
+        webSocketCanpNetworkGateway.setCanpNetwork(canpNetwork);
+        webSocketCanpNetworkGateway.setWebSocketCodec(webSocketCodec);
+        httpServer.put("/canp/*", webSocketCanpNetworkGateway);
+
+
+        canpNetworkAdapter.start();
+        canpNetworkSegment0.start();
         httpServer.start();
 
 
@@ -58,8 +67,8 @@ public class Main {
 
 
         httpServer.stop();
-        canNetworkSegment0.stop();
-//        canNetworkAdapter.stop();
+        canpNetworkSegment0.stop();
+        canpNetworkAdapter.stop();
     }
 
 
